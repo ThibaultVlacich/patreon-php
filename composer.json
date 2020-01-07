@@ -1,5 +1,5 @@
 {
-    "name": "soatok/patreon",
+    "name": "thibaultvlacich/patreon",
     "description": "Interact with the Patreon API via OAuth.",
     "license": "Apache-2.0",
     "authors": [
@@ -11,6 +11,11 @@
             "name": "Soatok Dreamseeker",
             "email": "soatok.dhole@gmail.com",
             "homepage": "https://soatok.com"
+        },
+        {
+            "name": "Thibault Vlacich",
+            "email": "thibault@vlacich.fr",
+            "homepage": "https://thibault.vlacich.fr"
         }
     ],
     "minimum-stability": "stable",
