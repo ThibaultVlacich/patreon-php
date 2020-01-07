@@ -33,14 +33,6 @@ class API
      */
     public $other_endpoint;
 
-    /**
-     * The cache for request results - an array that matches hash of the unique
-     * API request to the returned result
-     *
-     * @var array $request_cache
-     */
-    public static $request_cache;
-
     // Sets the reqeuest method for cURL
     /** @var string $api_request_method */
     public $api_request_method = 'GET';
@@ -236,19 +228,6 @@ class API
             $api_request .= '?' . http_build_query($params);
         }
 
-        // This identifies a unique request
-        if (extension_loaded('sodium')) {
-            $api_request_hash = bin2hex(sodium_crypto_generichash($api_request));
-        } else {
-            $api_request_hash = md5($api_request);
-        }
-
-        // Check if this request exists in the cache and if so, return it directly -
-        // avoids repeated requests to API in the same page run for same request string
-        if (isset(self::$request_cache[$api_request_hash])) {
-            return self::$request_cache[$api_request_hash];
-        }
-
         // Request is new - actually perform the request
         $ch = $this->__create_ch($api_request);
         $json_string = curl_exec($ch);
@@ -260,32 +239,23 @@ class API
 
         // don't try to parse a 500-class error, as it's likely not JSON
         if ($info['http_code'] >= 500) {
-            return self::add_to_request_cache($api_request_hash, $json_string);
+            return $json_string;
         }
 
         // don't try to parse a 400-class error, as it's likely not JSON
         if ($info['http_code'] >= 400) {
-            return self::add_to_request_cache($api_request_hash, $json_string);
+            return $json_string;
         }
 
         // Parse the return according to the format set by api_return_format variable
         // Then add this new request to the request cache and return it
         switch ($this->api_return_format) {
             case 'array':
-                return self::add_to_request_cache(
-                    $api_request_hash,
-                    json_decode($json_string, true)
-                );
+                return json_decode($json_string, true);
             case 'object':
-                return self::add_to_request_cache(
-                    $api_request_hash,
-                    json_decode($json_string)
-                );
+                return json_decode($json_string);
             case 'json':
-                return self::add_to_request_cache(
-                    $api_request_hash,
-                    $json_string
-                );
+                return $json_string;
             default:
                 throw new APIException('Unknown return format:' . $this->api_return_format);
         }
@@ -330,27 +300,5 @@ class API
 
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         return $ch;
-    }
-
-    /**
-     * This function manages the array that is used as the cache for API
-     * requests. What it does is to accept a md5 hash of entire query string
-     * (GET, with url, endpoint and options and all) and then add it to the
-     * request cache array.
-     *
-     * @param string $api_request_hash
-     * @param string|array|object $result
-     * @return string|array|object
-     */
-    public static function add_to_request_cache($api_request_hash, $result)
-    {
-        // If the cache array is larger than 50, snip the first item.
-        // This may be increased in future
-        if (!empty(self::$request_cache) && (count(self::$request_cache) > 50)) {
-            array_shift(self::$request_cache);
-        }
-
-        // Add the new request and return it
-        return self::$request_cache[$api_request_hash] = $result;
     }
 }
